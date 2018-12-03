@@ -25,4 +25,47 @@ $JAVA_OPTS"
 
 echo "Java launch options: $OPTS"
 
-exec java $OPTS -jar $SERVICE_JAR
+red="$(tput setaf 1)"
+yellow="$(tput setaf 3)"
+reset="$(tput sgr0)"
+bold="$(tput bold)"
+
+function warn() {
+    echo
+    echo "${yellow}********************************************************************************${reset}"
+    echo
+    echo -en "  $1"
+    echo
+    echo
+    echo "${yellow}********************************************************************************${reset}"    
+}
+
+function error() {
+	echo
+    echo "${red}${bold}ERROR: ${reset}$1"    
+}
+
+JAVAC_VERSION=$(javac -version)
+if [[ $? -ne 0 ]]; then
+	export TEXT=$(cat << WARNING 
+${bold}${red}                            DEPRECATION WARNING                            ${reset}
+${bold}The pure JRE image docker-openjdk-springboot:8-jre is no longer supported!${reset}
+  You will no longer receive any updates or security fixes for this version.
+  You should migrate to the docker-openjdk-springboot:8-jdk image (or a later 
+    version) as soon as possible.
+WARNING
+)
+	warn "$TEXT"
+    echo
+    echo "Continuing in 10 seconds ..."
+    echo
+    sleep 10
+fi
+
+if [ -f "$SERVICE_JAR" ]; then
+	exec java $OPTS -jar $SERVICE_JAR
+elif [ -d "$SERVICE_FOLDER" ]; then
+	exec java $OPTS -cp $SERVICE_FOLDER org.springframework.boot.loader.JarLauncher
+else
+	error "Cannot start: Must supply either $SERVICE_JAR or $SERVICE_FOLDER"
+fi
